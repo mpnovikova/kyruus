@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="1" errors="0" failures="0" skip="0"><testcase classname="doctor_service.example.tests.test_api.UserApiTestCase" name="test_status" time="0.015"></testcase></testsuite>
