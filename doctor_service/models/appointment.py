@@ -41,3 +41,13 @@ class Appointment:
         minute = slot[2:]
         # For simplicity lets assume we store all appointment in UTC
         return datetime(int(apt_date.year), int(apt_date.month), int(apt_date.day), int(hour), int(minute), tzinfo=None)
+
+    @staticmethod
+    def from_datarow(datarow):
+        [docid, app_date, slot_start, first_name, last_name, locid, address] = datarow
+
+        doctor = Doctor(docid, first_name, last_name)
+        location = Location(locid, address)
+        app_datetime = Appointment.get_apt_datetime(int(app_date), slot_start)
+
+        return Appointment(app_datetime, doctor, location)

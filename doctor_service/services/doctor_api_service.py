@@ -48,7 +48,7 @@ def read(docid):
     if not request.method == 'GET':
         raise ApiError('Invalid request', status_code=400)
     try:
-        doctor = service_container.doctor_data_service().read(docid=docid)
+        doctor = service_container.doctor_data_service().read(docid=int(docid.strip()))
     except (TypeError, RuntimeError) as e:
         raise ApiError(e.message, status_code=400)
 
@@ -65,7 +65,7 @@ def update(docid):
 
     try:
         doctor = service_container.doctor_data_service().update(
-            docid=docid,
+            docid=int(docid.strip()),
             first_name=request.json.get('first_name'),
             last_name=request.json.get('last_name'))
     except (TypeError, RuntimeError) as e:
@@ -80,7 +80,7 @@ def delete(docid):
         raise ApiError('Invalid request', status_code=400)
 
     try:
-        service_container.doctor_data_service().delete(docid=docid)
+        service_container.doctor_data_service().delete(docid=int(docid.strip()))
         return jsonify({}), 204
     except (TypeError, RuntimeError) as e:
         raise ApiError(e.message, status_code=400)

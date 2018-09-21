@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Kyruus.iml" filepath="$PROJECT_DIR$/Kyruus.iml" />
+      <module fileurl="file://$PROJECT_DIR$/kyruus.iml" filepath="$PROJECT_DIR$/kyruus.iml" />
     </modules>
   </component>
 </project>

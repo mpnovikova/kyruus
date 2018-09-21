@@ -2,6 +2,33 @@
 
 This repository contains the outlines of a web API. Review the problem statement below. When you arrive at Kyruus, you will design and implement a solution which satisfies the design criteria.
 
+### Solution ###
+For storage I have chosen SQLite3 db ypu can find it under `doctor_service/data/database.sqlite`
+table structure and pre-population with some basic data could be foung here `doctor_service/data/tables.sql`
+
+#### doctors_api ####
+Following operations have implemented for doctors
+* index 
+```GET /doctors```
+will list all doctors (unless they were deleted)
+* read. Access doctor info by individual `docid`. `docid` must be integer.
+```GET /doctors/<docid>```
+* create. Will take `first_name` and `last_name` and create a record for a doctor. Docid will be assigned automatically upon creation
+```POST /doctors```
+* update. Updates doctors' data same fields as create. Docid cannot be modified
+```PUT /doctors/<docid>```
+* delete. Marks doctor record as deleted. It will NOT completely wipe the record out of database `docid` must be integer.
+
+#### appointments_api ####
+```GET doctors/<docid>/appointments```
+will list all the appointments for a doctor
+
+```POST doctors/<docid>/appointments```
+will book an appointment for a doctor. Following parameters are required: `docid`, `locid`, `app_datetime`. `docid` and `locid` must be integers. For simplicity api accepts app_datetime only datimestamp
+
+```DELETE doctors/<docid>/appointments```
+will cancel an appointment for a doctor. Following parameters are required: `docid`, `locid`, `app_datetime`.
+
 ### Problem statement ###
 
 We would like to build a simple service for managing doctors and their schedules. 

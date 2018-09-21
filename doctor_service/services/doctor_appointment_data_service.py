@@ -1,5 +1,4 @@
 from datetime import datetime
-from dateutil.parser import *
 
 from doctor_service.models.appointment import Appointment
 from doctor_service.models.doctor import Doctor
@@ -13,65 +12,14 @@ class DoctorAppointmentDataService:
             raise TypeError('db_service must be an instance of SQLiteService')
         self.db_service = db_service
 
-        self.db_table = 'schedule'
-        self.db_fields = ['app_date', 'docid', 'locid', 'slotid']
-
-    def index(self, docid):
-        if not isinstance(docid, unicode) and not isinstance(docid, str):
-            raise TypeError('docid must be string or unicode')
-
-        return self._get_appointments_for_doctor(int(docid.strip()))
-
-    def read(self):
-        pass
-
-    def create(self, docid, locid, app_datetime):
-        if not isinstance(docid, unicode) and not isinstance(docid, str):
-            raise TypeError('docid must be string or unicode')
-
-        if not isinstance(locid, unicode) and not isinstance(locid, str):
-            raise TypeError('locid must be string or unicode')
-
-        if not isinstance(app_datetime, unicode) and not isinstance(app_datetime, str):
-            raise TypeError('app_datetime must be string or unicode')
-
-        try:
-            app_datetime_tz = parser(app_datetime)
-        except Exception as e:
-            raise RuntimeError(e.message)
-
-        utc_offset_timedelta = datetime.utcnow() - app_datetime_tz
-        app_datetime_utc = app_datetime_tz + utc_offset_timedelta
-
-        values = [
-            app_datetime_utc.strftime("%Y-%m-%d"),
-            docid.strip(),
-            locid.strip(),
-            self._get_slotid(app_datetime_utc)
-        ]
-        try:
-            app_id = self.db_service.insert(self.db_table, self.db_fields, values)
-        except Exception as e:
-            raise RuntimeError(e.message)
-
-        return app_id
-
-    def update(self, _id, *args):
-        pass
-
-    def delete(self, _id):
-        pass
-
-    def _get_appointments_for_doctor(self, docid):
-        result = []
-
-        table = '''schedule
+        self.db_table = '''schedule
             INNER JOIN doctors ON doctors.docid = schedule.docid
             INNER JOIN locations ON locations.locid = schedule.locid
             INNER JOIN slots ON slots.slotid = schedule.slotid
         '''
 
-        fields = [
+        self.db_fields = [
+            'doctors.docid',
             'schedule.app_date',
             'slots.slot_start',
             'doctors.first_name',
@@ -80,29 +28,101 @@ class DoctorAppointmentDataService:
             'locations.address'
         ]
 
-        predicate = "schedule.docid=%d" % docid
+    def index(self, docid):
+        if not isinstance(docid, int):
+            raise TypeError('docid must be int')
 
-        data = self.db_service.select_by_predicate(table, fields, predicate)
+        return self._get_appointments_for_doctor(docid)
 
-        for row in data:
-            print row
-            [app_date, slot_start, first_name, last_name, locid, address] = row
-            doctor = Doctor(docid, first_name, last_name)
-            print doctor
-            location = Location(locid, address)
-            print location
-            app_datetime = Appointment.get_apt_datetime(app_date, slot_start)
-            print app_datetime
+    def create(self, docid, locid, app_datetime):
+        if not isinstance(docid, int):
+            raise TypeError('docid must be int')
 
-            result.append(Appointment(app_datetime, doctor, location))
+        if not isinstance(locid, int):
+            raise TypeError('locid int')
 
-        return result
+        if not isinstance(app_datetime, int):
+            raise TypeError('app_datetime must be int')
 
-    def _get_slotid(self, datetime_utc):
-        slot = datetime_utc.strftime("%H%M")
         try:
-            result = self.db_service.read('slots', ['slotid'], "slot_start=%s" % slot)
-        except:
-            raise ValueError('Unknown slot')
-        return result[0]
+            app_datetime_utc = datetime.utcfromtimestamp(app_datetime)
+        except Exception as e:
+            raise RuntimeError(e.message)
+
+        app_date_utc = int(datetime(app_datetime_utc.year, app_datetime_utc.month, app_datetime_utc.day).strftime("%s"))
+        app_slot = app_datetime_utc.strftime("%H%M")
+
+        existing_appointment = self._get_appointments_for_doctor_location_datetime(
+            docid, locid, app_date_utc, app_slot)
+
+        if existing_appointment:
+            raise RuntimeError('Appointment for this doctor, location and time already exists')
+
+        field_values = {
+            'app_date': app_date_utc,
+            'docid': docid,
+            'locid': locid,
+            'slotid': "(SELECT slotid FROM slots WHERE slot_start='%s' )" % app_slot,
+            'created_at': int(datetime.utcnow().strftime("%s"))
+        }
+
+        try:
+            self.db_service.insert('schedule', field_values)
+        except Exception as e:
+            raise RuntimeError(e.message)
+
+        return self._get_appointments_for_doctor_location_datetime(docid, locid, app_date_utc, app_slot)
+
+    def delete(self, docid, locid, app_datetime):
+        if not isinstance(docid, int):
+            raise TypeError('docid must be int')
+
+        if not isinstance(locid, int):
+            raise TypeError('locid int')
+
+        if not isinstance(app_datetime, int):
+            raise TypeError('app_datetime must be int')
+
+        try:
+            app_datetime_utc = datetime.utcfromtimestamp(app_datetime)
+        except Exception as e:
+            raise RuntimeError(e.message)
+
+        app_date_utc = int(datetime(app_datetime_utc.year, app_datetime_utc.month, app_datetime_utc.day).strftime("%s"))
+        app_slot = app_datetime_utc.strftime("%H%M")
+
+        existing_appointment = self._get_appointments_for_doctor_location_datetime(
+            docid, locid, app_date_utc, app_slot)
+
+        if not existing_appointment:
+            raise RuntimeError('Cannot cancel appointment that doesn\'t exist')
+
+        table = "schedule"
+
+        updates = [
+            "deleted_at=%d" % int(datetime.utcnow().strftime("%s"))
+        ]
+        predicate = \
+            "docid=%d AND locid=%d AND app_date=%d AND slotid IN (SELECT slotid FROM slots WHERE slot_start='%s')" % \
+            (docid, locid, app_date_utc, app_slot)
+
+        self.db_service.update(table, updates, predicate)
+
+    def _get_appointments_for_doctor(self, docid):
+        predicate = "schedule.docid=%d AND schedule.deleted_at IS NULL" % docid
+
+        data = self.db_service.select_by_predicate(self.db_table, self.db_fields, predicate)
+
+        return [Appointment.from_datarow(row) for row in data]
+
+    def _get_appointments_for_doctor_location_datetime(self, docid, locid, app_date, app_slot):
+        predicate = "doctors.docid=%d AND locations.locid=%d AND schedule.app_date=%d AND slots.slot_start='%s' AND schedule.deleted_at IS NULL" % \
+                    (docid, locid, app_date, app_slot)
+
+        try:
+            data = self.db_service.select_by_predicate(self.db_table, self.db_fields, predicate)
+        except Exception as e:
+                raise RuntimeError(e.message)
+
+        return Appointment.from_datarow(data[0]) if len(data) else None
 

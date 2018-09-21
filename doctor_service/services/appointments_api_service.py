@@ -10,6 +10,7 @@ from doctor_service.services.service_container import ServiceContainer
 
 appointments_api = Blueprint('appointment_api', __name__, url_prefix='')
 service_container = ServiceContainer()
+appointments_service = service_container.appointments_data_service()
 
 
 @appointments_api.route('/doctors/<docid>/appointments', methods=['GET'])
@@ -19,7 +20,7 @@ def index(docid):
 
     response = []
     try:
-        result = service_container.appointments_data_service().index(docid)
+        result = appointments_service.index(int(docid.strip()))
     except TypeError as e:
         raise ApiError(e.message, status_code=400)
 
@@ -35,15 +36,32 @@ def create(docid):
         raise ApiError('Invalid request', status_code=400)
 
     try:
-        response = service_container.appointments_data_service().create(
-            docid=docid,
+        appointment = appointments_service.create(
+            docid=int(docid.strip()),
             locid=request.json.get('locid'),
             app_datetime=request.json.get('app_datetime')
         )
-    except TypeError as e:
+    except (TypeError, RuntimeError) as e:
         raise ApiError(e. message, status_code=400)
 
-    return jsonify({'response': response}), 201
+    return jsonify({'response': appointment.to_dict()}), 201
+
+
+@appointments_api.route('/doctors/<docid>/appointments', methods=['DELETE'])
+def cancel(docid):
+    if not request.method == 'DELETE':
+        raise ApiError('Invalid request', status_code=400)
+
+    try:
+        appointments_service.delete(
+            docid=int(docid.strip()),
+            locid=request.json.get('locid'),
+            app_datetime=request.json.get('app_datetime')
+        )
+    except (TypeError, RuntimeError) as e:
+        raise ApiError(e. message, status_code=400)
+
+    return jsonify({}), 204
 
 
 @appointments_api.errorhandler(ApiError)

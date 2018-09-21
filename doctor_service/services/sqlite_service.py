@@ -8,6 +8,9 @@ class SQLiteService:
         if not isinstance(db_client, Connection):
             raise TypeError('db_client must be sqlite3.Connection')
         self.db_client = db_client
+    #
+    # def __del__(self):
+    #     self.db_client.close()
 
     def select_all(self, table, fields):
         cursor = self.db_client.cursor()
@@ -22,7 +25,7 @@ class SQLiteService:
         cursor = self.db_client.cursor()
 
         query = "SELECT %s FROM %s WHERE %s" % (",".join(fields), table, predicate)
-        print query
+
         cursor.execute(query)
         result = cursor.fetchall()
         return result
@@ -44,10 +47,10 @@ class SQLiteService:
         self.db_client.commit()
         return result
 
-    def update(self, table, rowid, updates):
+    def update(self, table, updates, predicate):
         cursor = self.db_client.cursor()
 
-        query = "UPDATE %s SET %s WHERE rowid=%d" % (table, ",".join(updates), rowid)
+        query = "UPDATE %s SET %s WHERE %s" % (table, ",".join(updates), predicate)
 
         cursor.execute(query)
         self.db_client.commit()

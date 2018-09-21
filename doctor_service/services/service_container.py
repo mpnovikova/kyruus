@@ -12,7 +12,7 @@ from doctor_service.services.sqlite_service import SQLiteService
 class ServiceContainer(DeclarativeContainer):
     basedir = os.path.abspath(os.path.dirname(__file__))
 
-    db_client = Singleton(sqlite3.connect, basedir + '/../data/database.sqlite')
+    db_client = Factory(sqlite3.connect, basedir + '/../data/database.sqlite')
 
     db_service = Factory(SQLiteService, db_client=db_client)
 

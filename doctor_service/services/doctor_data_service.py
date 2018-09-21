@@ -1,4 +1,4 @@
-from time import time
+from datetime import datetime
 
 from doctor_service.models.doctor import Doctor
 from doctor_service.services.sqlite_service import SQLiteService
@@ -14,10 +14,10 @@ class DoctorDataService:
         self.db_table = 'doctors'
 
     def read(self, docid):
-        if not isinstance(docid, unicode) and not isinstance(docid, str):
-            raise TypeError('docid must be string or unicode')
+        if not isinstance(docid, int):
+            raise TypeError('docid must be int')
 
-        return self._get_doctor_by_id(docid.strip())
+        return self._get_doctor_by_id(docid)
 
     def index(self):
         result = []
@@ -45,7 +45,7 @@ class DoctorDataService:
             field_values = {
                 'first_name': "'" + first_name.strip() + "'",
                 'last_name': "'" + last_name.strip() + "'",
-                'created_at': int(time())
+                'created_at': int(datetime.utcnow().strftime("%s"))
             }
             docid = self.db_service.insert(self.db_table, field_values)
         except Exception as e:
@@ -54,14 +54,14 @@ class DoctorDataService:
         return docid
 
     def update(self, docid, first_name=None, last_name=None):
-        if not isinstance(docid, unicode) and not isinstance(docid, str):
-            raise TypeError('docid must be string or unicode')
+        if not isinstance(docid, int):
+            raise TypeError('docid must be int')
 
         if not self._get_doctor_by_id(docid):
             raise RuntimeError('Cannot modify non-existing record')
 
         updates = [
-            "updated_at=%d" % int(time())
+            "updated_at=%d" % int(datetime.utcnow().strftime("%s"))
         ]
 
         if first_name is not None:
@@ -73,22 +73,22 @@ class DoctorDataService:
             if not isinstance(last_name, unicode) and not isinstance(last_name, str):
                 raise TypeError('last_name must be string or unicode')
             updates.append("last_name='%s'" % last_name.strip())
-
+        print updates
         try:
-            self.db_service.update(self.db_table, int(docid.strip()), updates)
+            self.db_service.update(self.db_table, updates, "docid=%d" % docid)
         except Exception as e:
             raise RuntimeError(e.message)
 
         return self._get_doctor_by_id(docid)
 
     def delete(self, docid):
-        if not isinstance(docid, unicode) and not isinstance(docid, str):
-            raise TypeError('docid must be string or unicode')
+        if not isinstance(docid, int):
+            raise TypeError('docid must be int')
 
-        updates = ["deleted_at=%d" % int(time())]
+        updates = ["deleted_at=%d" % int(datetime.utcnow().strftime("%s"))]
 
         try:
-            self.db_service.update(self.db_table, int(docid.strip()), updates)
+            self.db_service.update(self.db_table, updates, "docid=%d" % docid)
         except Exception as e:
             raise RuntimeError(e.message)
 
@@ -98,7 +98,7 @@ class DoctorDataService:
         fields = ['docid', 'first_name', 'last_name']
         try:
             [docid, first_name, last_name] = \
-                self.db_service.select_by_predicate(self.db_table, fields, "docid=%d AND deleted_at IS NULL" % int(docid))[0]
+                self.db_service.select_by_predicate(self.db_table, fields, "docid=%d AND deleted_at IS NULL" % docid)[0]
         except Exception as e:
             if e.message == 'list index out of range':
                 return None  # Not an error

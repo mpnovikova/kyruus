@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS schedule(
   FOREIGN KEY(slotid) REFERENCES slots(slotid)
 );
 
-INSERT INTO schedule(app_date, docid, locid, slotid, created_at) VALUES(strftime('%s','now', '+2 month'), 1, 1, 9, strftime('%s','now'));
+INSERT INTO schedule(app_date, docid, locid, slotid, created_at) VALUES(1542690000, 1, 1, 9, strftime('%s','now'));
 
 SELECT schedule.app_date, slots.slot_start, doctors.first_name, doctors.last_name, locations.address FROM schedule
 INNER JOIN doctors ON doctors.docid = schedule.docid
